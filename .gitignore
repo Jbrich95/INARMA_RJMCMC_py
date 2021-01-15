@@ -2,5 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
-.Rproj
+*.Rproj
+INARMA_RJMCMC.R
 Documentation.tex

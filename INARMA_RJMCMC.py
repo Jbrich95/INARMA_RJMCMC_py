@@ -5,19 +5,20 @@ from scipy.stats import beta
 from scipy.stats import gamma
 from scipy.stats import multinomial as multinom
 
-def sim_aug_AR(x,y,z,alpha,lam,p,rmax):
+def sim_aug_AR(x,y,z,alphas,lam,p,rmax):
     n=len(x)
     out=np.zeros([n,p+1])
 
     yprop=np.zeros([n,p])
-    zprop=np.copy(x)
+    zprop = np.zeros([n,1])
+    zprop[0:(rmax-1)] = x[0:(rmax-1)]
 
     for t in range(rmax-1,n):
 
         while True:
 
             for i in range(0,p):
-                yprop[t,i] = binom(x[t-i],alpha[i]).rvs()
+                yprop[t,i] = binom(x[t-i],alphas[i]).rvs()
 
             zprop[t]=x[t]-sum(yprop[t,0:p-1])
             if zprop[t]>=0: 
@@ -35,20 +36,21 @@ def sim_aug_AR(x,y,z,alpha,lam,p,rmax):
         
     return(out)
     
-def sim_aug_MA(x,v,z,beta,lam,q,rmax):
+def sim_aug_MA(x,v,z,betas,lam,q,rmax):
 
     n=len(x)
     out=np.zeros([n,q+1])
 
     vprop=np.zeros([n,q])
-    zprop=np.copy(x)
+    zprop = np.zeros([n,1])
+    zprop[0:(rmax-1)] = x[0:(rmax-1)]
 
     for t in range(rmax-1,n):
 
         while True:
 
             for i in range(0,q):
-                vprop[t,i] = binom(z[t-i],beta[i]).rvs()
+                vprop[t,i] = binom(z[t-i],betas[i]).rvs()
 
             zprop[t]=x[t]-sum(vprop[t,0:q-1])
             if zprop[t]>=0: 
@@ -60,8 +62,8 @@ def sim_aug_MA(x,v,z,beta,lam,q,rmax):
         A=dist.pmf(zprop[t])/dist.pmf(z[t])
         if Q == 0:
             for i in range(0,Q):
-                distprop=binom(zprop[t], beta[i])
-                dist=binom(z[t], beta[i])
+                distprop=binom(zprop[t], betas[i])
+                dist=binom(z[t], betas[i])
                 np.seterr(invalid='ignore')
 
                 A *= distprop.pmf(v[t+i,i])/dist.pmf(v[t+i,i])
@@ -75,22 +77,23 @@ def sim_aug_MA(x,v,z,beta,lam,q,rmax):
         
     return out
 
-def sim_aug_ARMA(x,y,v,z,alpha,beta,lam,p,q,rmax):
+def sim_aug_ARMA(x,y,v,z,alphas,betas,lam,p,q,rmax):
     n=len(x)
     out=np.zeros([n,p+q+1])
 
     yprop=np.zeros([n,p])
     vprop=np.zeros([n,q])
-    zprop=np.copy(x)
+    zprop = np.zeros([n,1])
+    zprop[0:(rmax-1)] = x[0:(rmax-1)]
 
     for t in range(rmax-1,n):
 
         while True:
 
             for i in range(0,p):
-                yprop[t,i] = binom(x[t-i],alpha[i]).rvs()
+                yprop[t,i] = binom(x[t-i],alphas[i]).rvs()
             for j in range(0,q):
-                vprop[t,j] = binom(z[t-j],beta[i]).rvs()
+                vprop[t,j] = binom(int(z[t-j]),betas[j]).rvs()
             zprop[t]=x[t]-sum(yprop[t,0:p-1])-sum(vprop[t,0:q-1])
             if zprop[t]>=0: 
                 break
@@ -101,7 +104,7 @@ def sim_aug_ARMA(x,y,v,z,alpha,beta,lam,p,q,rmax):
         A=dist.pmf(zprop[t])/dist.pmf(z[t])
         if Q == 0:
             for i in range(0,Q):
-                distprop=binom(zprop[t], beta[i])
+                distprop=binom(zprop[t], betas[i])
                 dist=binom(z[t], beta[i])
                 np.seterr(invalid='ignore')
 
@@ -116,13 +119,13 @@ def sim_aug_ARMA(x,y,v,z,alpha,beta,lam,p,q,rmax):
     
     out[:,0:p] = np.copy(y)
     out[:,(p):(p+q)] = np.copy(v)
-    out[:,[p+q]] = np.copy(z)
+    out[:,(p+q):(p+q+1)] = np.copy(z)
     
     return out
 
 def sim_pars_AR(x,y,z,p):
     n=len(x)
-    alpha = np.zeros(p)
+    alpha = np.zeros([p,1])
     while True:
         for i in range(0,p):
             dist = beta(a=sum(y[(p+1):n,i])+1,b=sum(x[(p+1-i):(n-i)])-sum(y[(p+1):n,i])+1)
@@ -134,7 +137,7 @@ def sim_pars_AR(x,y,z,p):
 
 def sim_pars_MA(x,v,z,q):
     n=len(x)
-    beta_sample = np.zeros(q)
+    beta_sample = np.zeros([q,1])
     while True:
 
         for i in range(0,q):
@@ -164,7 +167,7 @@ def sim_pars_ARMA(x,y,v,z,p,q):
     while True:
 
         for i in range(0,q):
-            dist = beta(a=sum(v[(q+1):n,i])+1,b=sum(z[(q+1-i):(n-i)])-sum(y[(q+1):n,i])+1)
+            dist = beta(a=sum(v[(q+1):n,i])+1,b=sum(z[(q+1-i):(n-i)])-sum(v[(q+1):n,i])+1)
             beta_sample[i]= dist.rvs(1)
         if sum(beta_sample) < 1: 
             break
@@ -185,7 +188,7 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
     rmax=max(p_max,q_max)+2
 
     order_count=np.zeros([N_reps,2])
-    pars_sample= []*N_reps
+    pars_sample= []
 
     p = init_order[0]
     q=init_order[1]
@@ -259,8 +262,8 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
                     prob *= binom(x_data[t-K-1],alphaprop[K]).pmf(yprop[t,K-1])/(binom(x_data[t-K-1],alphas[K]).pmf(y[t,K])*binom(x_data[t-p],alphas[p-1]).pmf(y[t,p-1]))*binom(yprop[t,K],U).pmf(y[t,K])
                 
                 J=1/alphaprop[K]  
-
-                A=f**J
+                f=prob*n**(0.5)/p
+                A=f*J
 
                 u2 = np.random.rand(1)
                 if u2 <= A:
@@ -285,7 +288,7 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
                 gamma[0]=1/(sum(betas)+1)
 
                 S = np.zeros([n,q+1])
-                zprop = np.zeros(n)
+                zprop = np.zeros([n,1])
                 vprop = np.zeros([n,q])
                 for t in range(0,n):
                     dist= multinom( n = y[t,0],p= gamma)
@@ -330,7 +333,7 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
                 alphaprop[pprop-1]=(1-U)*alphas[K]
                 yprop=np.zeros([n,pprop])
                 yprop[:,0:p]=y
-                S=np.zeros(n)
+                S=np.zeros([n,1])
                 for t in range(0,n):
 
                     S[t]=binom(y[t,K],U).rvs(1)
@@ -371,8 +374,8 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
 
 
             vprop = np.zeros([n,q])
-            yprop = np.zeros(n)
-            zprop = np.zeros(n)
+            yprop = np.zeros([n,1])
+            zprop = np.zeros([n,1])
 
             for t in range(0,n):
                 yprop[t]=sum(S[t,])
@@ -412,7 +415,49 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
        ##Q order step
 
         ## Gibbs-sampler for parameters
+        if q==0:
+            theta=sim_pars_AR(x_data,y,z,p)
+            alphas=theta[0]
+            lam=theta[1]
+            out=sim_aug_AR(x_data,y,z,alphas,lam,p,rmax)
+            y=out[:,0:p]
+            v=0
+            z=out[:,p]
 
+            pars_sample.append([alphas,[],lam])
+        if p==0:
+            theta=sim_pars_MA(x_data,v,z,q)
+            betas=theta[0]
+            lam=theta[1]
+            out=sim_aug_MA(x_data,v,z,betas,lam,q,rmax)
+            v=out[:,0:q]
+            y=0
+            z=out[:,q]
+
+            pars_sample.append([[],[betas],lam])
+        if (not p ==0) and (not q ==0):
+            theta=sim_pars_ARMA(x_data,y,v,z,p,q)
+            alphas=theta[0]
+            lam=theta[2]
+            out=sim_aug_ARMA(x_data,y,v,z,alphas,betas,lam,p,q,rmax)
+            y=out[:,0:p]
+            v=out[:,p:(p+q)]
+
+            z=out[:,p+q]
+
+            pars_sample.append([[alphas],[betas],lam])
+
+
+        if iter + 1 % 10 == 0:
+            print("Replication : %int" %iter)
 
         order_count[iter,]=[p,q]
-    return order_count
+        
+    samp_max_p=int(np.max(order_count[:,0]))
+    samp_max_q=int(np.max(order_count[:,1]))
+  
+    par_mat=np.zeros([N_reps, samp_max_p+samp_max_q+1])
+    
+
+
+    return order_count, pars_sample

@@ -7,4 +7,4 @@ detailed in Enciso-Mora, V., Neal, P. and Subba Rao, T. (2009), <i>Efficient ord
 
 * Documentation.pdf - Details the algorithm
 * INARMA_RJMCMC.R - Functions
-* Applicaton.R - Illustrationg of application to disability benefit claims data in trees.txt
+* Applicaton.R - Illustration of application to disability benefit claims data in trees.txt

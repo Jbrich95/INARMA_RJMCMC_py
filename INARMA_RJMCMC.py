@@ -14,7 +14,7 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
     q_max = order_max[1]
     rmax=max(p_max,q_max)+2
 
-    order_count= np.zeros([N_reps,2])
+    order_count= np.zeros([N_reps,2],dtype= int)
     pars_sample= []
 
     p = init_order[0]
@@ -65,20 +65,14 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
             theta=sim_pars_AR(x_data,y,z,p)
             alphas=theta[0]
             lam=theta[1]
-            out=sim_aug_AR(x_data,y,z,alphas,lam,p,rmax)
-            y=out[:,0:p]
-            v=0
-            z=out[:,[p]]
-
+            sim_aug_AR(x_data,y,z,alphas,lam,p,rmax)
+   
             pars_sample.append([alphas,[],lam])
         if p==0:
             theta=sim_pars_MA(x_data,v,z,q)
             betas=theta[0]
             lam=theta[1]
-            out=sim_aug_MA(x_data,v,z,betas,lam,q,rmax)
-            v=out[:,0:q]
-            y=0
-            z=out[:,[q]]
+            sim_aug_MA(x_data,v,z,betas,lam,q,rmax)
 
             pars_sample.append([[],[betas],lam])
         if (not p ==0) and (not q ==0):
@@ -86,11 +80,7 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
             alphas=theta[0]
             betas = theta[1]
             lam=theta[2]
-            out=sim_aug_ARMA(x_data,y,v,z,alphas,betas,lam,p,q,rmax)
-            y=out[:,0:p]
-            v=out[:,p:(p+q)]
-
-            z=out[:,[p+q]]
+            sim_aug_ARMA(x_data,y,v,z,alphas,betas,lam,p,q,rmax)
 
             pars_sample.append([[alphas],[betas],lam])
 

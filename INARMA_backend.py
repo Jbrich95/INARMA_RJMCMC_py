@@ -188,8 +188,20 @@ def p_up(x_data,y,alphas,p,rmax):
 
     logprob=0
 
-    for t in range(rmax-1,n):
-        logprob += binom(n=x_data[t-K-1],p=alphaprop[K]).logpmf(yprop[t,K])+binom(n=x_data[t-pprop-1],p=alphaprop[pprop-1]).logpmf(yprop[t,pprop-1])-binom(n=x_data[t-K-1],p=alphas[K]).logpmf(yprop[t,K])-binom(n=y[t,K],p=U).logpmf(yprop[t,K])
+    sub_yprop=yprop[(rmax-1):(n-1),]
+
+    diststemp=list(map(lambda n : binom(n=n,p=alphaprop[K]), x_data[(rmax-2-K):(n-K-2)]))
+    logprob +=np.sum(list(map(lambda dists, y : dists.logpmf(y), diststemp,sub_yprop[:,K])))
+
+    diststemp=list(map(lambda n : binom(n=n,p=alphaprop[pprop-1]), x_data[(rmax-2-pprop):(n-pprop-2)]))
+    logprob +=np.sum(list(map(lambda dists, y : dists.logpmf(y), diststemp,sub_yprop[:,pprop-1])))
+
+    diststemp=list(map(lambda n : binom(n=n,p=alphas[K]), x_data[(rmax-2-pprop):(n-pprop-2)]))
+    logprob -=np.sum(list(map(lambda dists, y : dists.logpmf(y), diststemp,sub_yprop[:,pprop-1])))
+
+    diststemp=list(map(lambda n : binom(n=n,p=alphas[K]), x_data[(rmax-2-K):(n-K-2)]))
+    logprob -=np.sum(list(map(lambda dists, y : dists.logpmf(y), diststemp,sub_yprop[:,pprop-1])))
+               
     logf=logprob+np.log(pprop)-0.5*np.log(n)
 
 

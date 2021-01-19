@@ -85,8 +85,8 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
             pars_sample.append([[alphas],[betas],lam])
 
 
-        if iter + 1 % 10 == 0:
-            print("Replication : %int" %iter)
+        if (iter+1) % 100 == 0:
+            print("Replication : ", (iter+1))
 
         order_count[iter,]=[p,q]
         

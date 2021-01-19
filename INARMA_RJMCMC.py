@@ -79,15 +79,15 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
                 order=np.random.choice([-1,1])
                 if not (order == -1 and q == 0):
                     break
-            #if order== -1:
-               # q_new,betas,v, z, lam = arma_to_ar(x_data, y,v,z, alphas, betas, lam, p, q,rmax)
+            if order== -1:
+                q_new,betas,v, z, lam = arma_to_ar(x_data, y,v,z, alphas, betas, lam, p, q,rmax)
 
             if order== 1 and (not q == q_max) :
                 q_new, betas, v = q_up(x_data,v,z,betas,q,rmax)
 
-       # elif q == 0 and (not p ==0) and (not q == q_max):
+        elif q == 0 and (not p ==0) and (not q == q_max):
 
-              #  q_new,betas,v,z, lam = ar_to_arma(x_data, y,v,z, alphas, betas, lam, p, q,rmax)
+                q_new,betas,v,z, lam = ar_to_arma(x_data, y,v,z, alphas, betas, lam, p, q,rmax)
         q=q_new
 
         

@@ -313,7 +313,7 @@ def ma_to_arma(x_data, y, v,z,alphas, betas, lam,p, q,rmax)   :
 
     S=np.zeros([n,q+1],dtype = int)
 
-    S[:,1]=np.array([binom.rvs(n=n,p=U,size = 1) for n in z]).reshape([n,1])
+    S[:,0]=np.array([binom.rvs(n=n,p=U,size = 1) for n in z]).reshape([n,1])
 
  
     for j in range(1,q+1):
@@ -444,3 +444,83 @@ def q_down(x_data,v,z,betas,q,rmax):
         betas=betaprop
         v=vprop
     return q_new, betas, v
+
+def arma_to_ar(x_data,y,v,z,alphas,betas,lam,p,q,rmax):  
+    n = len(x_data)
+    q_new = np.copy(q)
+    lamprop = lam*(1+betas[0])
+
+    
+    zprop = np.zeros([n,1],dtype = int)
+  
+    for t in range(0,n):
+        zprop[t,0] = z[t,0] + v[t,0]
+      
+
+    U = betas[0]
+
+    logprob=0
+
+    logprob +=np.sum([poisson_logpmf(k=k, lam = lamprop) for k in zprop[(rmax-1):(n),0]])-np.sum([poisson_logpmf(k=k, lam = lam) for k in z[(rmax-1):(n),0]])
+    
+    logprob -=np.sum([binom_logpmf(k=k,n=n, p=betas[0]) for n,k in zip(z[(rmax-2):(n-1),0],v[(rmax-1):(n),0])])
+    
+    logprob +=np.sum([binom_logpmf(k=k,n=n, p=U/(1+U)) for n,k in zip(z[(rmax-2):(n-1),0],zprop[(rmax-1):(n),0])]) 
+
+    logf=logprob+0.5*np.log(n)
+
+    J=1+U 
+
+    logA=logf+np.log(J)
+    
+    if np.log(np.random.rand(1)) <= logA:
+        q_new=0
+        lam = lamprop
+        z=z_prop
+        v=0
+        betas = 0
+    return q_new,betas,v, z, lam 
+
+def ar_to_arma(x_data, y, v,z,alphas, betas, lam,p, q,rmax)   :
+    n = len(x_data)
+    q_new=np.copy(q)
+    U=np.random.rand(1)
+    betaprop=U
+    lamprop = lam/(1+U)
+
+    S=np.zeros([n,1],dtype = int)
+    vprop = np.zeros([n,1],dtype = int)
+    zprop = np.zeros([n,1],dtype = int)
+    
+    S[0,0]=binom.rvs(n=z[0,0],p=U/(1+U),size = 1) 
+    vprop[0,0]=s[0,0]
+    
+    zprop[0,0]=z[0,0]-S[0,0]
+    for t in range(1,n):
+        S[t,0]=binom.rvs(n=z[t],p=U/(1+U))
+        vprop[t,0]=S[t,0]
+        zprop[t,0]=z[t,0] - vprop[t,0]
+       
+            
+    logprob=0
+    logprob +=np.sum([poisson_logpmf(k=k, lam = lamprop) for k in zprop[(rmax-1):(n)]])-np.sum([poisson_logpmf(k=k, lam = lam) for k in z[(rmax-1):(n)]])
+    logprob +=np.sum([binom_logpmf(k=k,n=n, p=betaprop) for n,k in zip(zprop[(rmax-2):(n-1),0],vprop[(rmax-1):(n),0])])
+    
+    
+    logprob -=np.sum([binom_logpmf(k=k,n=min(n1,n2), p=U/(1+U)) for n1,n2,k in zip(zprop[(rmax-1):(n),0],z[(rmax-1):(n),0],vprop[(rmax-1):(n),0])])
+                                                                                                                                                                    
+  
+
+    logf=logprob-0.5*np.log(n)
+
+    J=1/(1+U)
+
+    logA=logf+np.log(J)
+    if np.log(np.random.rand(1)) <= logA:
+        q_new=1
+        betas=betaprop
+        lam = lamprop
+        v=vprop
+        z=zprop
+    
+    return q_new,betas,v,z,lam

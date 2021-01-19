@@ -58,8 +58,39 @@ def inarma_rjmcmc(x_data,init_augs,init_pars,init_order,order_max,N_reps):
                 p_new,alphas,y,v,z = ma_to_arma(x_data, y,v,z, alphas, betas, lam, p, q,rmax)
                 
         p=p_new
+        
+        
        ##Q order step
+        if q>1 :
+        #Does p go up or down?
+            if not q == q_max:
+                order=np.random.choice([-1,1])
+            else:
+                order = -1
 
+            if order==1 :
+                q_new, betas, v = q_up(x_data,v,z,betas,q,rmax)
+            elif order== -1 :
+                q_new, betas, v = q_down(x_data,v,z,betas,q,rmax)
+
+        elif q ==1 :
+                #Does p go up or down?
+            while True:
+                order=np.random.choice([-1,1])
+                if not (order == -1 and q == 0):
+                    break
+            #if order== -1:
+               # q_new,betas,v, z, lam = arma_to_ar(x_data, y,v,z, alphas, betas, lam, p, q,rmax)
+
+            if order== 1 and (not q == q_max) :
+                q_new, betas, v = q_up(x_data,v,z,betas,q,rmax)
+
+       # elif q == 0 and (not p ==0) and (not q == q_max):
+
+              #  q_new,betas,v,z, lam = ar_to_arma(x_data, y,v,z, alphas, betas, lam, p, q,rmax)
+        q=q_new
+
+        
         ## Gibbs-sampler for parameters
         if q==0:
             theta=sim_pars_AR(x_data,y,z,p)

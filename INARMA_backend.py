@@ -191,7 +191,7 @@ def p_up(x_data,y,alphas,p,rmax):
     yprop[:,0:p]=y
     S=np.array([binom.rvs(n=n,p=U,size = 1) for n in y[:,K]]).reshape(n)
     yprop[:,pprop-1]=y[:,K]-S
-
+    yprop[:,K]=S
     logprob=0
 
 
@@ -363,4 +363,84 @@ def ma_to_arma(x_data, y, v,z,alphas, betas, lam,p, q,rmax)   :
         v=vprop
         z=zprop
     
-    return (p_new,alphas,y,v,z)
+    return p_new,alphas,y,v,z
+
+#ORDER CHANGING - q
+
+
+def q_up(x_data,v,z,betas,q,rmax):  
+    n = len(x_data)
+    qprop=q+1
+    q_new=np.copy(q)
+
+    U=np.random.rand(1)
+    K=np.random.randint(0,q)
+    betaprop=np.zeros(qprop)
+    betaprop[0:q]=betas
+    betaprop[K]=U*betas[K]
+
+    betaprop[qprop-1]=(1-U)*betas[K]
+    vprop=np.zeros([n,qprop],dtype = int)
+    vprop[:,0:q]=v
+    S=np.array([binom.rvs(n=n,p=U,size = 1) for n in v[:,K]]).reshape(n)
+    vprop[:,qprop-1]=v[:,K]-S
+    vprop[:,K]=S
+    logprob=0
+
+
+    logprob +=np.sum([binom_logpmf(k=k,n=n, p=betaprop[K]) for n,k in zip(z[(rmax-2-K):(n-K-1),0],vprop[(rmax-1):n,K])])
+
+    logprob +=np.sum([binom_logpmf(k=k,n=n, p=betaprop[qprop-1]) for n,k in zip(z[(rmax-1-qprop):(n-qprop),0],vprop[(rmax-1):(n),qprop-1])])
+
+    logprob -=np.sum([binom_logpmf(k=k,n=n, p=betas[K]) for n,k in zip(z[(rmax-2-K):(n-K-1),0],v[(rmax-1):(n),K])])
+
+    logprob -=np.sum([binom_logpmf(k=k,n=n, p=U) for n,k in zip(vprop[(rmax-1):(n),K],v[(rmax-1):(n),K])])
+               
+    logf=logprob+np.log(qprop)-0.5*np.log(n)
+
+
+    J=betas[K]  
+
+    logA=logf+np.log(J)
+
+    if np.log(np.random.rand()) <= logA:
+        q_new=qprop
+        betas=betaprop
+        v=vprop
+    return q_new, betas, v
+
+
+def q_down(x_data,v,z,betas,q,rmax):  
+    n = len(x_data)
+    q_new=np.copy(q)
+
+    qprop=q-1
+
+    K=np.random.randint(0,q-1)
+    betaprop=betas[0:qprop]
+    betaprop[K]=betas[K]+betas[q-1]
+    vprop=v[:,0:qprop]
+
+    vprop[:,K]=v[:,K]+v[:,q-1]
+    U = betas[K]/(betaprop[K])
+    
+    logprob=0
+    
+    logprob +=np.sum([binom_logpmf(k=k,n=n, p=betaprop[K]) for n,k in zip(z[(rmax-2-K):(n-K-1),0],vprop[(rmax-1):(n),K-1])])
+
+    logprob -=np.sum([binom_logpmf(k=k,n=n, p=betas[K]) for n,k in zip(z[(rmax-2-K):(n-K-1),0],v[(rmax-1):(n),K])])
+
+    logprob -=np.sum([binom_logpmf(k=k,n=n, p=betas[q-1]) for n,k in zip(z[(rmax-1-q):(n-q),0],v[(rmax-1):(n),q-1])])
+
+    logprob +=np.sum([binom_logpmf(k=k,n=n, p=U) for n,k in zip(vprop[(rmax-1):(n),K],v[(rmax-1):(n),K])])
+        
+    J = 1/betaprop[K]  
+    logf=logprob+0.5*np.log(n)-np.log(q)
+    logA=logf+np.log(J)
+
+    
+    if np.log(np.random.rand(1)) <= logA:
+        q_new=qprop
+        betas=betaprop
+        v=vprop
+    return q_new, betas, v
